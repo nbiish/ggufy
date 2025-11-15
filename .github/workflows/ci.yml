@@ -14,15 +14,13 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          override: true
           components: rustfmt, clippy
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
       - name: Cargo fmt check
-        run: cargo fmt -- --check
+        run: cargo fmt --all --check
       - name: Cargo clippy
         run: cargo clippy -- -D warnings
       - name: Cargo audit
@@ -34,5 +32,10 @@ jobs:
       - name: Test
         run: cargo test --all --locked
       - name: Smoke test
-        run: ./target/release/ggufy --help
         shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            ./target/release/ggufy.exe --help
+          else
+            ./target/release/ggufy --help
+          fi
