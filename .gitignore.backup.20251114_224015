@@ -125,9 +125,6 @@ out/
 *.sublime-project
 *.sublime-workspace
 
-# Trae IDE state
-.trae/
-
 # ═══════════════════════════════════════════════════════════
 # OS GENERATED FILES
 # ═══════════════════════════════════════════════════════════
@@ -163,12 +160,6 @@ _build/
 build/
 public/
 dist/
-
-# Rust build outputs
-target/
-
-# Repo-local model workspace (symlinks)
-models/
 
 # ═══════════════════════════════════════════════════════════
 # DATABASE FILES

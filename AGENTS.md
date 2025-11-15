@@ -1,6 +1,6 @@
 # Expertly Crafted Enterprise Grade Code Guideline
 
-Run `eza --all --tree --level=2` for the most up to date repo context.
+Run `eza --all --tree --level=2` && `eval 'git status -sb'` for the most up to date repo context.
 
 ## Structure codebase according to the DNA Design pattern -> `repo-root/dna/`
 

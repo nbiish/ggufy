@@ -1,0 +1,12 @@
+[project]
+name = "ggufy-cli"
+version = "0.1.0"
+description = "Python shim that invokes the ggufy binary"
+readme = "README.md"
+requires-python = ">=3.8"
+
+[project.scripts]
+ggufy = "ggufy_cli.__main__:main"
+
+[tool.uv]
+package = true
