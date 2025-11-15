@@ -7,6 +7,8 @@ on:
 jobs:
   build-release:
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       matrix:
         include:
@@ -18,31 +20,40 @@ jobs:
             target: aarch64-apple-darwin
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+    env:
+      COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+      COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           target: ${{ matrix.target }}
-          override: true
       - name: Build
         run: |
           cargo build --release --target ${{ matrix.target }}
           mkdir -p dist
           cp target/${{ matrix.target }}/release/ggufy dist/ggufy-${{ matrix.target }}
           tar -czf ggufy-${{ matrix.target }}.tar.gz -C dist ggufy-${{ matrix.target }}
-          shasum -a 256 ggufy-${{ matrix.target }}.tar.gz >> checksums.txt
+      - name: Checksums (Linux)
+        if: ${{ runner.os == 'Linux' }}
+        run: sha256sum ggufy-${{ matrix.target }}.tar.gz >> checksums.txt
+      - name: Checksums (macOS)
+        if: ${{ runner.os == 'macOS' }}
+        run: shasum -a 256 ggufy-${{ matrix.target }}.tar.gz >> checksums.txt
+      - name: Checksums (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          Get-FileHash -Algorithm SHA256 ggufy-${{ matrix.target }}.tar.gz | Select-Object -ExpandProperty Hash | Out-File -Append -FilePath checksums.txt
       - name: Install cosign
-        if: ${{ secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PASSWORD != '' }}
+        if: ${{ env.COSIGN_PRIVATE_KEY != '' && env.COSIGN_PASSWORD != '' }}
         uses: sigstore/cosign-installer@v3
         with:
           cosign-release: v2.4.0
       - name: Sign artifact (cosign)
-        if: ${{ secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PASSWORD != '' }}
-        env:
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        if: ${{ env.COSIGN_PRIVATE_KEY != '' && env.COSIGN_PASSWORD != '' }}
         run: |
-          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+          echo "${{ env.COSIGN_PRIVATE_KEY }}" > cosign.key
           cosign sign-blob --key cosign.key --output-signature ggufy-${{ matrix.target }}.tar.gz.sig ggufy-${{ matrix.target }}.tar.gz
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -55,7 +66,7 @@ jobs:
           name: checksums-${{ matrix.target }}.txt
           path: checksums.txt
       - name: Upload signature
-        if: ${{ secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PASSWORD != '' }}
+        if: ${{ env.COSIGN_PRIVATE_KEY != '' && env.COSIGN_PASSWORD != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: ggufy-${{ matrix.target }}.tar.gz.sig
@@ -64,6 +75,8 @@ jobs:
   publish:
     needs: build-release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/download-artifact@v4
         with:
