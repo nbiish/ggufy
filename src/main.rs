@@ -21,6 +21,8 @@ struct Cli {
     force: bool,
     #[arg(long = "port")]
     port: Option<u16>,
+    #[arg(long = "dry-run", default_value_t = false)]
+    dry_run: bool,
     #[command(subcommand)]
     command: Commands,
 }
@@ -62,7 +64,7 @@ fn main() {
                 std::process::exit(2);
             }
             let port = port_or_default(false, cli.port);
-            run_llama_server_hf(&repo, Some(port), Some(&extra));
+            run_llama_server_hf(&repo, Some(port), Some(&extra), cli.dry_run);
             if let Some(p) = find_hf_cached_gguf(&repo) {
                 symlink_into_guffy(&p, cli.link_dir.as_ref(), cli.force).ok();
             }
@@ -92,7 +94,7 @@ fn main() {
             if let Some(blob) = resolve_ollama_library_gguf(&name, &tag) {
                 symlink_named_into_guffy(&blob, &format!("{}-{}.gguf", name, tag), cli.link_dir.as_ref(), cli.force).ok();
                 let port = port_or_default(true, cli.port);
-                run_llama_server_model(&blob, find_mmproj_for(&blob, cli.link_dir.as_ref()), Some(port), Some(&extra));
+                run_llama_server_model(&blob, find_mmproj_for(&blob, cli.link_dir.as_ref()), Some(port), Some(&extra), cli.dry_run);
             } else {
                 eprintln!("no gguf blob found for {}:{} in ollama library", name, tag);
                 std::process::exit(1);
@@ -107,7 +109,7 @@ fn main() {
             let target = resolve_model_ref(&model, cli.link_dir.as_ref())
                 .unwrap_or_else(|| PathBuf::from(&model));
             let port = port_or_default(false, cli.port);
-            run_llama_server_model(&target, find_mmproj_for(&target, cli.link_dir.as_ref()), Some(port), Some(&extra));
+            run_llama_server_model(&target, find_mmproj_for(&target, cli.link_dir.as_ref()), Some(port), Some(&extra), cli.dry_run);
         }
         Commands::Cli { model, extra } => {
             ensure_models_dir(cli.link_dir.as_ref()).expect("models dir");
@@ -117,7 +119,7 @@ fn main() {
             }
             let target = resolve_model_ref(&model, cli.link_dir.as_ref())
                 .unwrap_or_else(|| PathBuf::from(&model));
-            run_llama_cli_model(&target, Some(&extra));
+            run_llama_cli_model(&target, Some(&extra), cli.dry_run);
         }
         Commands::Locate { pattern } => {
             let re = Regex::new(&pattern).unwrap_or_else(|_| Regex::new(".*").unwrap());
@@ -146,7 +148,7 @@ fn main() {
                 let (name, tag) = split_model_tag(&target);
                 if let Some(blob) = resolve_ollama_library_gguf(&name, &tag) {
                     symlink_named_into_guffy(&blob, &format!("{}-{}.gguf", name, tag), cli.link_dir.as_ref(), cli.force).ok();
-                    run_llama_server_model(&blob, find_mmproj_for(&blob, cli.link_dir.as_ref()), Some(port), Some(&extra));
+                    run_llama_server_model(&blob, find_mmproj_for(&blob, cli.link_dir.as_ref()), Some(port), Some(&extra), cli.dry_run);
                 } else {
                     eprintln!("no gguf blob found for {}:{} in ollama library", name, tag);
                     std::process::exit(1);
@@ -154,7 +156,7 @@ fn main() {
             } else {
                 let target_path = resolve_model_ref(&target, cli.link_dir.as_ref())
                     .unwrap_or_else(|| PathBuf::from(&target));
-                run_llama_server_model(&target_path, find_mmproj_for(&target_path, cli.link_dir.as_ref()), Some(port), Some(&extra));
+                run_llama_server_model(&target_path, find_mmproj_for(&target_path, cli.link_dir.as_ref()), Some(port), Some(&extra), cli.dry_run);
             }
         }
         Commands::Ollama { sub } => {
@@ -166,7 +168,7 @@ fn main() {
                         let (name, tag) = split_model_tag(&target);
                         if let Some(blob) = resolve_ollama_library_gguf(&name, &tag) {
                             symlink_named_into_guffy(&blob, &format!("{}-{}.gguf", name, tag), cli.link_dir.as_ref(), cli.force).ok();
-                            run_llama_server_model(&blob, find_mmproj_for(&blob, cli.link_dir.as_ref()), Some(port), Some(&extra));
+                            run_llama_server_model(&blob, find_mmproj_for(&blob, cli.link_dir.as_ref()), Some(port), Some(&extra), cli.dry_run);
                         } else {
                             eprintln!("no gguf blob found for {}:{} in ollama library", name, tag);
                             std::process::exit(1);
@@ -174,7 +176,7 @@ fn main() {
                     } else {
                         let target_path = resolve_model_ref(&target, cli.link_dir.as_ref())
                             .unwrap_or_else(|| PathBuf::from(&target));
-                        run_llama_server_model(&target_path, find_mmproj_for(&target_path, cli.link_dir.as_ref()), Some(port), Some(&extra));
+                        run_llama_server_model(&target_path, find_mmproj_for(&target_path, cli.link_dir.as_ref()), Some(port), Some(&extra), cli.dry_run);
                     }
                 }
                 OllamaCmd::Run { model, extra } => {
@@ -183,7 +185,7 @@ fn main() {
                     let (name, tag) = split_model_tag(&model);
                     if let Some(blob) = resolve_ollama_library_gguf(&name, &tag) {
                         symlink_named_into_guffy(&blob, &format!("{}-{}.gguf", name, tag), cli.link_dir.as_ref(), cli.force).ok();
-                        run_llama_server_model(&blob, find_mmproj_for(&blob, cli.link_dir.as_ref()), Some(port), Some(&extra));
+                        run_llama_server_model(&blob, find_mmproj_for(&blob, cli.link_dir.as_ref()), Some(port), Some(&extra), cli.dry_run);
                     } else {
                         eprintln!("no gguf blob found for {}:{} in ollama library", name, tag);
                         std::process::exit(1);
@@ -196,7 +198,7 @@ fn main() {
                 LlamaCmd::Hf { repo, extra } => {
                     ensure_models_dir(cli.link_dir.as_ref()).expect("models dir");
                     let port = port_or_default(false, cli.port);
-                    run_llama_server_hf(&repo, Some(port), Some(&extra));
+                    run_llama_server_hf(&repo, Some(port), Some(&extra), cli.dry_run);
                     if let Some(p) = find_hf_cached_gguf(&repo) {
                         symlink_into_guffy(&p, cli.link_dir.as_ref(), cli.force).ok();
                     }
@@ -206,13 +208,13 @@ fn main() {
                     let target = resolve_model_ref(&model, cli.link_dir.as_ref())
                         .unwrap_or_else(|| PathBuf::from(&model));
                     let port = port_or_default(false, cli.port);
-                    run_llama_server_model(&target, find_mmproj_for(&target, cli.link_dir.as_ref()), Some(port), Some(&extra));
+                    run_llama_server_model(&target, find_mmproj_for(&target, cli.link_dir.as_ref()), Some(port), Some(&extra), cli.dry_run);
                 }
                 LlamaCmd::Cli { model, extra } => {
                     ensure_models_dir(cli.link_dir.as_ref()).expect("models dir");
                     let target = resolve_model_ref(&model, cli.link_dir.as_ref())
                         .unwrap_or_else(|| PathBuf::from(&model));
-                    run_llama_cli_model(&target, Some(&extra));
+                    run_llama_cli_model(&target, Some(&extra), cli.dry_run);
                 }
             }
         }
@@ -287,7 +289,7 @@ fn symlink_into_guffy(src: &Path, link_override: Option<&PathBuf>, force: bool) 
             return Ok(());
         }
     }
-    std::os::unix::fs::symlink(src, dst)
+    symlink_file(src, &dst)
 }
 
 fn symlink_named_into_guffy(src: &Path, link_name: &str, link_override: Option<&PathBuf>, force: bool) -> IoResult<()> {
@@ -300,7 +302,7 @@ fn symlink_named_into_guffy(src: &Path, link_name: &str, link_override: Option<&
             return Ok(());
         }
     }
-    std::os::unix::fs::symlink(src, dst)
+    symlink_file(src, &dst)
 }
 
 fn find_llama_cache_models() -> Vec<PathBuf> {
@@ -342,18 +344,26 @@ fn is_gguf_file(p: &Path) -> IoResult<bool> {
     Ok(n >= 4 && &head == b"GGUF")
 }
 
-fn run_llama_server_hf(repo: &str, port: Option<u16>, extra: Option<&[String]>) {
-    let mut cmd = Command::new("llama-server");
+fn run_llama_server_hf(repo: &str, port: Option<u16>, extra: Option<&[String]>, dry_run: bool) {
+    let bin = resolve_bin("llama-server").unwrap_or_else(|| {
+        eprintln!("llama-server not found on PATH");
+        std::process::exit(127)
+    });
+    let mut cmd = Command::new(bin);
     cmd.arg("-hf").arg(repo);
     let p = port.unwrap_or(12434);
     cmd.arg("--port").arg(p.to_string());
     if let Some(args) = extra { cmd.args(args); }
     cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
-    let _ = cmd.spawn().expect("llama-server");
+    spawn_or_print(cmd, dry_run);
 }
 
-fn run_llama_server_model(model_path: &Path, mmproj: Option<PathBuf>, port: Option<u16>, extra: Option<&[String]>) {
-    let mut cmd = Command::new("llama-server");
+fn run_llama_server_model(model_path: &Path, mmproj: Option<PathBuf>, port: Option<u16>, extra: Option<&[String]>, dry_run: bool) {
+    let bin = resolve_bin("llama-server").unwrap_or_else(|| {
+        eprintln!("llama-server not found on PATH");
+        std::process::exit(127)
+    });
+    let mut cmd = Command::new(bin);
     cmd.arg("-m").arg(model_path);
     if let Some(mp) = mmproj {
         cmd.arg("--mmproj").arg(mp);
@@ -362,15 +372,19 @@ fn run_llama_server_model(model_path: &Path, mmproj: Option<PathBuf>, port: Opti
     cmd.arg("--port").arg(p.to_string());
     if let Some(args) = extra { cmd.args(args); }
     cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
-    let _ = cmd.spawn().expect("llama-server");
+    spawn_or_print(cmd, dry_run);
 }
 
-fn run_llama_cli_model(model_path: &Path, extra: Option<&[String]>) {
-    let mut cmd = Command::new("llama-cli");
+fn run_llama_cli_model(model_path: &Path, extra: Option<&[String]>, dry_run: bool) {
+    let bin = resolve_bin("llama-cli").unwrap_or_else(|| {
+        eprintln!("llama-cli not found on PATH");
+        std::process::exit(127)
+    });
+    let mut cmd = Command::new(bin);
     cmd.arg("-m").arg(model_path);
     if let Some(args) = extra { cmd.args(args); }
     cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
-    let _ = cmd.spawn().expect("llama-cli");
+    spawn_or_print(cmd, dry_run);
 }
 
 fn find_hf_cached_gguf(repo: &str) -> Option<PathBuf> {
@@ -505,4 +519,39 @@ fn scan_for_mmproj(dir: &Path) -> Option<PathBuf> {
 fn port_or_default(is_ollama: bool, requested: Option<u16>) -> u16 {
     if let Some(p) = requested { return p; }
     if is_ollama { 11434 } else { 12434 }
+}
+
+fn symlink_file(src: &Path, dst: &Path) -> IoResult<()> {
+    #[cfg(unix)]
+    { std::os::unix::fs::symlink(src, dst) }
+    #[cfg(windows)]
+    { std::os::windows::fs::symlink_file(src, dst) }
+}
+
+fn resolve_bin(name: &str) -> Option<PathBuf> {
+    if let Ok(path) = std::env::var("PATH") {
+        for p in path.split(if cfg!(windows) { ';' } else { ':' }) {
+            let mut candidate = PathBuf::from(p);
+            candidate.push(name);
+            if cfg!(windows) {
+                if candidate.exists() { return Some(candidate); }
+                let mut exe = candidate.clone();
+                exe.set_extension("exe");
+                if exe.exists() { return Some(exe); }
+            } else if candidate.exists() {
+                return Some(candidate);
+            }
+        }
+    }
+    None
+}
+
+fn spawn_or_print(mut cmd: Command, dry_run: bool) {
+    if dry_run {
+        let args: Vec<String> = cmd.get_args().map(|a| a.to_string_lossy().to_string()).collect();
+        let prog = cmd.get_program().to_string_lossy().to_string();
+        println!("{} {}", prog, args.join(" "));
+        return;
+    }
+    let _ = cmd.spawn().expect("spawn");
 }
