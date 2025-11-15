@@ -31,11 +31,30 @@ jobs:
           mkdir -p dist
           cp target/${{ matrix.target }}/release/ggufy dist/ggufy-${{ matrix.target }}
           tar -czf ggufy-${{ matrix.target }}.tar.gz -C dist ggufy-${{ matrix.target }}
+          shasum -a 256 ggufy-${{ matrix.target }}.tar.gz >> checksums.txt
+      - name: Optional sign artifacts (cosign)
+        if: ${{ secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PASSWORD != '' }}
+        run: |
+          curl -sSL -o cosign.tar.gz https://github.com/sigstore/cosign/releases/download/v2.4.0/cosign-linux-amd64.tar.gz
+          tar -xzf cosign.tar.gz || true
+          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+          ./cosign sign-blob --key cosign.key --output-signature ggufy-${{ matrix.target }}.tar.gz.sig ggufy-${{ matrix.target }}.tar.gz <<<$'${{ secrets.COSIGN_PASSWORD }}'
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ggufy-${{ matrix.target }}.tar.gz
           path: ggufy-${{ matrix.target }}.tar.gz
+      - name: Upload checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: checksums-${{ matrix.target }}.txt
+          path: checksums.txt
+      - name: Upload signature
+        if: ${{ secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PASSWORD != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ggufy-${{ matrix.target }}.tar.gz.sig
+          path: ggufy-${{ matrix.target }}.tar.gz.sig
 
   publish:
     needs: build-release
@@ -49,5 +68,7 @@ jobs:
         with:
           files: |
             artifacts/**/ggufy-*.tar.gz
+            artifacts/**/checksums-*.txt
+            artifacts/**/ggufy-*.tar.gz.sig
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

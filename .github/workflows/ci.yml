@@ -21,6 +21,10 @@ jobs:
         run: cargo fmt -- --check
       - name: Cargo clippy
         run: cargo clippy -- -D warnings
+      - name: Cargo audit
+        run: |
+          cargo install --locked cargo-audit || true
+          cargo audit || true
       - name: Build
         run: cargo build --release
       - name: Smoke test
