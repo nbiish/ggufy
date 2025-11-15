@@ -406,9 +406,7 @@ fn ensure_models_dir(link_override: Option<&PathBuf>) -> IoResult<()> {
     fs::create_dir_all(&p)
 }
 
-fn ggufy_models_dir() -> PathBuf {
-    ggufy_models_dir_with(None)
-}
+// removed unused ggufy_models_dir to satisfy clippy dead_code
 
 fn ggufy_models_dir_with(link_override: Option<&PathBuf>) -> PathBuf {
     if let Some(o) = link_override {
@@ -427,22 +425,23 @@ fn llama_cache_dir() -> PathBuf {
     {
         let mut p = home_dir().expect("home");
         p.push("Library/Caches/llama.cpp");
-        return p;
+        p
     }
     #[cfg(target_os = "linux")]
     {
         let mut p = home_dir().expect("home");
         p.push(".cache/llama.cpp");
-        return p;
+        p
     }
     #[cfg(target_os = "windows")]
     {
         if let Ok(local_app) = std::env::var("LOCALAPPDATA") {
             let mut p = PathBuf::from(local_app);
             p.push("llama.cpp");
-            return p;
+            p
+        } else {
+            PathBuf::from("C:/Users/Public/AppData/Local/llama.cpp")
         }
-        return PathBuf::from("C:/Users/Public/AppData/Local/llama.cpp");
     }
 }
 
@@ -730,7 +729,7 @@ fn resolve_model_ref(model: &str, link_override: Option<&PathBuf>) -> Option<Pat
     }
     // allow shorthand without .gguf
     let mut p2 = ggufy_models_dir_with(link_override);
-    p2.push(format!("{}", model));
+    p2.push(model);
     if p2.extension().is_none() {
         p2.set_extension("gguf");
     }
@@ -762,14 +761,14 @@ fn scan_for_mmproj(dir: &Path) -> Option<PathBuf> {
         .filter_map(|e| e.ok())
     {
         let p = e.path();
-        if p.file_name()
-            .map(|n| n.to_string_lossy().contains("mmproj"))
-            .unwrap_or(false)
-        {
-            if p.extension().map(|x| x == "gguf").unwrap_or(false) {
-                return Some(p.to_path_buf());
-            }
-        }
+    if p
+        .file_name()
+        .map(|n| n.to_string_lossy().contains("mmproj"))
+        .unwrap_or(false)
+        && p.extension().map(|x| x == "gguf").unwrap_or(false)
+    {
+        return Some(p.to_path_buf());
+    }
     }
     None
 }
@@ -818,6 +817,7 @@ fn resolve_bin(name: &str) -> Option<PathBuf> {
     None
 }
 
+#[allow(clippy::zombie_processes)]
 fn spawn_or_print(mut cmd: Command, dry_run: bool) {
     if dry_run {
         let args: Vec<String> = cmd
