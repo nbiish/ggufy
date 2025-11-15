@@ -39,3 +39,30 @@ jobs:
           else
             ./target/release/ggufy --help
           fi
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install TruffleHog
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+      - name: Determine commit range
+        id: range
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "BASE=${{ github.event.pull_request.base.sha }}" >> $GITHUB_ENV
+            echo "HEAD=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
+          else
+            echo "BASE=$(git rev-parse HEAD~1)" >> $GITHUB_ENV
+            echo "HEAD=$(git rev-parse HEAD)" >> $GITHUB_ENV
+          fi
+      - name: Skip when base equals head
+        if: ${{ env.BASE == env.HEAD }}
+        run: echo "Base and head are the same; skipping TruffleHog scan"
+      - name: TruffleHog scan for verified secrets
+        if: ${{ env.BASE != env.HEAD }}
+        run: trufflehog git . --since-commit "$BASE" --results=verified
