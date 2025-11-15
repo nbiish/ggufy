@@ -12,7 +12,15 @@ fn help_runs() {
 #[test]
 fn dry_run_llama_hf() {
     let mut cmd = Command::cargo_bin("ggufy").unwrap();
-    cmd.args(["--dry-run", "-c", "hf", "owner/repo", "--", "--ctx-size", "4096"]);
+    cmd.args([
+        "--dry-run",
+        "-c",
+        "hf",
+        "owner/repo",
+        "--",
+        "--ctx-size",
+        "4096",
+    ]);
     let assert = cmd.assert();
     assert.success();
 }
