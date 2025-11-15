@@ -27,6 +27,8 @@ jobs:
           cargo audit || true
       - name: Build
         run: cargo build --release
+      - name: Test
+        run: cargo test --all --locked
       - name: Smoke test
         run: ./target/release/ggufy --help
         shell: bash
