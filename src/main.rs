@@ -174,13 +174,7 @@ fn main() {
                 )
                 .ok();
                 let port = port_or_default(false, cli.port);
-                run_llama_server_model(
-                    &blob,
-                    Some(port),
-                    Some(&extra),
-                    cli.dry_run,
-                    cli.verbose,
-                );
+                run_llama_server_model(&blob, Some(port), Some(&extra), cli.dry_run, cli.verbose);
             } else {
                 eprintln!(
                     "no local gguf blob found for {}:{} and cloud unavailable",
@@ -191,7 +185,11 @@ fn main() {
         }
         Commands::Simple { model, extra } => {
             ensure_models_dir(cli.link_dir.as_ref()).expect("models dir");
-            let prompt = if extra.is_empty() { String::new() } else { extra.join(" ") };
+            let prompt = if extra.is_empty() {
+                String::new()
+            } else {
+                extra.join(" ")
+            };
             if prompt.is_empty() {
                 eprintln!("missing prompt");
                 std::process::exit(2);
@@ -206,13 +204,20 @@ fn main() {
                         std::process::exit(127)
                     });
                     let mut cmd = Command::new(bin);
-                    cmd.arg("-m").arg(&blob).arg("-p").arg(&prompt).arg("-no-cnv");
+                    cmd.arg("-m")
+                        .arg(&blob)
+                        .arg("-p")
+                        .arg(&prompt)
+                        .arg("-no-cnv");
                     cmd.stdout(Stdio::inherit()).stderr(Stdio::null());
                     spawn_or_print(cmd, cli.dry_run);
                 } else if is_cloud_model_available(&name) {
                     run_ollama_simple(&name, "cloud", &prompt, cli.dry_run, cli.verbose);
                 } else {
-                    eprintln!("no local gguf blob found for {}:{} and cloud unavailable", name, tag);
+                    eprintln!(
+                        "no local gguf blob found for {}:{} and cloud unavailable",
+                        name, tag
+                    );
                     std::process::exit(1);
                 }
             } else {
@@ -259,7 +264,8 @@ fn main() {
                         cli.link_dir.as_ref(),
                         cli.force,
                         cli.verbose,
-                    ).map(|_| {
+                    )
+                    .map(|_| {
                         linked += 1;
                     });
                 }
@@ -284,13 +290,7 @@ fn main() {
                 )
                 .ok();
                 let port = port_or_default(true, cli.port);
-                run_llama_server_model(
-                    &blob,
-                    Some(port),
-                    Some(&extra),
-                    cli.dry_run,
-                    cli.verbose,
-                );
+                run_llama_server_model(&blob, Some(port), Some(&extra), cli.dry_run, cli.verbose);
             } else {
                 eprintln!("no gguf blob found for {}:{} in ollama library", name, tag);
                 std::process::exit(1);
@@ -305,13 +305,7 @@ fn main() {
             let target = resolve_model_ref(&model, cli.link_dir.as_ref())
                 .unwrap_or_else(|| PathBuf::from(&model));
             let port = port_or_default(false, cli.port);
-            run_llama_server_model(
-                &target,
-                Some(port),
-                Some(&extra),
-                cli.dry_run,
-                cli.verbose,
-            );
+            run_llama_server_model(&target, Some(port), Some(&extra), cli.dry_run, cli.verbose);
         }
         Commands::Cli { model, extra } => {
             ensure_models_dir(cli.link_dir.as_ref()).expect("models dir");
@@ -485,13 +479,7 @@ fn main() {
                 let target = resolve_model_ref(&model, cli.link_dir.as_ref())
                     .unwrap_or_else(|| PathBuf::from(&model));
                 let port = port_or_default(false, cli.port);
-                run_llama_server_model(
-                    &target,
-                    Some(port),
-                    Some(&extra),
-                    cli.dry_run,
-                    cli.verbose,
-                );
+                run_llama_server_model(&target, Some(port), Some(&extra), cli.dry_run, cli.verbose);
             }
             LlamaCmd::Cli { model, extra } => {
                 ensure_models_dir(cli.link_dir.as_ref()).expect("models dir");
@@ -742,10 +730,7 @@ fn run_ollama_list(dry_run: bool, verbose: bool) {
         println!("{} {}", bin.display(), "list");
         return;
     }
-    let out = Command::new(bin)
-        .arg("list")
-        .output()
-        .expect("ollama list");
+    let out = Command::new(bin).arg("list").output().expect("ollama list");
     if verbose {
         eprintln!("ollama list completed");
     }
@@ -775,7 +760,9 @@ fn normalize_model_tag(target: &str, tag: Option<&str>) -> (String, String) {
         return (n, t);
     }
     let name = target.to_string();
-    let t = tag.map(|s| s.to_string()).unwrap_or_else(|| "latest".to_string());
+    let t = tag
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "latest".to_string());
     (name, t)
 }
 
@@ -969,14 +956,13 @@ fn scan_for_mmproj(dir: &Path) -> Option<PathBuf> {
         .filter_map(|e| e.ok())
     {
         let p = e.path();
-    if p
-        .file_name()
-        .map(|n| n.to_string_lossy().contains("mmproj"))
-        .unwrap_or(false)
-        && p.extension().map(|x| x == "gguf").unwrap_or(false)
-    {
-        return Some(p.to_path_buf());
-    }
+        if p.file_name()
+            .map(|n| n.to_string_lossy().contains("mmproj"))
+            .unwrap_or(false)
+            && p.extension().map(|x| x == "gguf").unwrap_or(false)
+        {
+            return Some(p.to_path_buf());
+        }
     }
     None
 }

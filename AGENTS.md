@@ -1,18 +1,15 @@
 # Expertly Crafted Enterprise Grade Code Guideline
 
-Run `eza --all --tree --level=2` && `eval 'git status -sb'` for the most up to date repo context.
+Always use a venv .venv for Python projects.
+Always use `eza --all --tree --git` to view project structure.
 
-## Structure codebase according to the DNA Design pattern -> `repo-root/dna/`
+ Structure codebase according to the DNA Design pattern -> `repo-root/dna/`
 
 - Atoms (`dna/atoms/`) - Core utilities, data types, state management
 - Molecules (`dna/molecules/`) - Composite components, deployment scripts
 - Proteins (`dna/proteins/`) - High-level flows and orchestration
 
-## Maintain Documentation in `knowledge-base/`
-
-- knowledge-base/*.md
-
-## Code Security
+Maintain `knowledge-base/`
 
 Always check for:
 
@@ -25,8 +22,6 @@ Always check for:
 - Environment variable protection
 - Error handling without information leakage
 - Rate limiting and DoS prevention
-
-## Prompt Security
 
 Guard against:
 
@@ -44,8 +39,6 @@ Best Practices:
 - Implement output filtering
 - Monitor for suspicious patterns
 - Maintain context boundaries
-
-## Code Quality Standards
 
 Every module/function should have:
 

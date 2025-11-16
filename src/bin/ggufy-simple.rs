@@ -17,15 +17,23 @@ struct SimpleCli {
 
 fn main() {
     let cli = SimpleCli::parse();
-    let prompt = if cli.prompt.is_empty() { String::new() } else { cli.prompt.join(" ") };
+    let prompt = if cli.prompt.is_empty() {
+        String::new()
+    } else {
+        cli.prompt.join(" ")
+    };
     if prompt.is_empty() {
         eprintln!("missing prompt");
         std::process::exit(2);
     }
-    let model = cli.model_flag.clone().or(cli.model_pos.clone()).unwrap_or_else(|| {
-        eprintln!("missing model");
-        std::process::exit(2)
-    });
+    let model = cli
+        .model_flag
+        .clone()
+        .or(cli.model_pos.clone())
+        .unwrap_or_else(|| {
+            eprintln!("missing model");
+            std::process::exit(2)
+        });
     if model.contains(':') {
         let (name, tag) = split_model_tag(&model);
         if tag.eq_ignore_ascii_case("cloud") {
@@ -69,7 +77,9 @@ fn default_link_dir() -> PathBuf {
 }
 
 fn link_path_for(model: &str, link_override: Option<&str>) -> PathBuf {
-    let base = link_override.map(PathBuf::from).unwrap_or_else(default_link_dir);
+    let base = link_override
+        .map(PathBuf::from)
+        .unwrap_or_else(default_link_dir);
     let mut p = base.join(model);
     if p.extension().is_none() {
         p.set_extension("gguf");
@@ -90,7 +100,11 @@ fn run_llama_cli_model(model_path: &PathBuf, prompt: &str) {
         std::process::exit(127)
     });
     let mut cmd = Command::new(bin);
-    cmd.arg("-m").arg(model_path).arg("-p").arg(prompt).arg("-no-cnv");
+    cmd.arg("-m")
+        .arg(model_path)
+        .arg("-p")
+        .arg(prompt)
+        .arg("-no-cnv");
     cmd.stdout(Stdio::inherit()).stderr(Stdio::null());
     let _ = cmd.status().expect("llama-cli");
 }
