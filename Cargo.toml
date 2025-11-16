@@ -3,8 +3,9 @@ name = "ggufy"
 version = "0.1.1"
 edition = "2021"
 description = "Unified GGUF wrapper for llama.cpp and Ollama"
-license = "MIT"
+license-file = "LICENSE"
 repository = "https://github.com/nbiish/ggufy"
+readme = "README.md"
 
 [features]
 default = ["simple-bin"]
