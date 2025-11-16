@@ -1,0 +1,8 @@
+^target/
+^models/
+^\.guffy/
+^docs/
+^dist/
+^site/
+^public/
+^Cargo\.lock$
