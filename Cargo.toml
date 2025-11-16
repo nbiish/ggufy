@@ -1,6 +1,6 @@
 [package]
 name = "ggufy"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "Unified GGUF wrapper for llama.cpp and Ollama"
 license-file = "LICENSE"
