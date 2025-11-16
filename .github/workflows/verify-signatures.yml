@@ -1,0 +1,40 @@
+name: Verify Release Signatures
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.6.0
+      - name: Prepare pubkey
+        if: ${{ secrets.COSIGN_PUBLIC_KEY != '' }}
+        run: |
+          echo "${COSIGN_PUBLIC_KEY}" > cosign.pub
+        env:
+          COSIGN_PUBLIC_KEY: ${{ secrets.COSIGN_PUBLIC_KEY }}
+      - name: Download release assets
+        if: ${{ secrets.COSIGN_PUBLIC_KEY != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir dist
+          gh release download "${GITHUB_REF_NAME}" --dir dist
+      - name: Verify signatures
+        if: ${{ secrets.COSIGN_PUBLIC_KEY != '' }}
+        run: |
+          cd dist
+          FAIL=0
+          for sig in $(ls *.sig 2>/dev/null || true); do
+            ART=$(echo "$sig" | sed 's/\.sig$//')
+            if [ -f "$ART" ]; then
+              if ! cosign verify-blob --key ../cosign.pub --signature "$sig" "$ART"; then
+                echo "Verification failed for $ART"
+                FAIL=1
+              fi
+            fi
+          done
+          test "$FAIL" = "0"

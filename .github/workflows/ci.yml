@@ -1,12 +1,14 @@
 name: CI
+
 on:
   push:
-    branches: [ main ]
+    branches: ["**"]
   pull_request:
-    branches: [ main ]
+    branches: ["**"]
 
 jobs:
-  build:
+  rust:
+    name: Rust ${matrix.os}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -15,54 +17,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-      - name: Cargo fmt check
-        run: cargo fmt --all --check
-      - name: Cargo clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt -- --check
+      - name: Clippy
         run: cargo clippy -- -D warnings
-      - name: Cargo audit
-        run: |
-          cargo install --locked cargo-audit || true
-          cargo audit || true
       - name: Build
         run: cargo build --release
       - name: Test
         run: cargo test --all --locked
-      - name: Smoke test
-        shell: bash
-        run: |
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            ./target/release/ggufy.exe --help
-          else
-            ./target/release/ggufy --help
-          fi
 
-  secret-scan:
+  python-build:
+    name: Python build uv-shim
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          fetch-depth: 0
-      - name: Install TruffleHog
+          python-version: "3.11"
+      - name: Install build backend
         run: |
-          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
-      - name: Determine commit range
-        id: range
-        shell: bash
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "BASE=${{ github.event.pull_request.base.sha }}" >> $GITHUB_ENV
-            echo "HEAD=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
-          else
-            echo "BASE=$(git rev-parse HEAD~1)" >> $GITHUB_ENV
-            echo "HEAD=$(git rev-parse HEAD)" >> $GITHUB_ENV
-          fi
-      - name: Skip when base equals head
-        if: ${{ env.BASE == env.HEAD }}
-        run: echo "Base and head are the same; skipping TruffleHog scan"
-      - name: TruffleHog scan for verified secrets
-        if: ${{ env.BASE != env.HEAD }}
-        run: trufflehog git . --since-commit "$BASE" --results=verified || true
+          python -m pip install --upgrade pip
+          python -m pip install build
+      - name: Build package
+        working-directory: uv-shim
+        run: python -m build

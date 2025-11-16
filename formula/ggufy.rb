@@ -10,9 +10,13 @@ class Ggufy < Formula
   def install
     system "cargo", "build", "--release"
     bin.install "target/release/ggufy"
+    if File.exist?("target/release/ggufy-simple")
+      bin.install "target/release/ggufy-simple"
+    end
   end
 
   test do
     system "#{bin}/ggufy", "list"
+    system "#{bin}/ggufy-simple", "--help"
   end
 end

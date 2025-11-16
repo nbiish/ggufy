@@ -1,93 +1,115 @@
 name: Release
+
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
-  build-release:
-    runs-on: ${{ matrix.os }}
-    permissions:
-      contents: read
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: macos-latest
-            target: aarch64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-    env:
-      COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-      COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+  build-linux:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          target: ${{ matrix.target }}
+          targets: x86_64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@v2
       - name: Build
+        run: cargo build --release --locked --target x86_64-unknown-linux-gnu
+      - name: Package
         run: |
-          cargo build --release --target ${{ matrix.target }}
           mkdir -p dist
-          cp target/${{ matrix.target }}/release/ggufy dist/ggufy-${{ matrix.target }}
-          tar -czf ggufy-${{ matrix.target }}.tar.gz -C dist ggufy-${{ matrix.target }}
-      - name: Checksums (Linux)
-        if: ${{ runner.os == 'Linux' }}
-        run: sha256sum ggufy-${{ matrix.target }}.tar.gz >> checksums.txt
-      - name: Checksums (macOS)
-        if: ${{ runner.os == 'macOS' }}
-        run: shasum -a 256 ggufy-${{ matrix.target }}.tar.gz >> checksums.txt
-      - name: Checksums (Windows)
-        if: ${{ runner.os == 'Windows' }}
-        shell: pwsh
-        run: |
-          Get-FileHash -Algorithm SHA256 ggufy-${{ matrix.target }}.tar.gz | Select-Object -ExpandProperty Hash | Out-File -Append -FilePath checksums.txt
-      - name: Install cosign
-        if: ${{ env.COSIGN_PRIVATE_KEY != '' && env.COSIGN_PASSWORD != '' }}
-        uses: sigstore/cosign-installer@v3
+          cp target/x86_64-unknown-linux-gnu/release/ggufy dist/ggufy
+          if [ -f target/x86_64-unknown-linux-gnu/release/ggufy-simple ]; then cp target/x86_64-unknown-linux-gnu/release/ggufy-simple dist/ggufy-simple; fi
+          tar -C dist -cvzf ggufy-${{ github.ref_name }}-linux-x86_64.tar.gz ggufy ggufy-simple
+      - uses: actions/upload-artifact@v4
         with:
-          cosign-release: v2.4.0
-      - name: Sign artifact (cosign)
-        if: ${{ env.COSIGN_PRIVATE_KEY != '' && env.COSIGN_PASSWORD != '' }}
-        run: |
-          echo "${{ env.COSIGN_PRIVATE_KEY }}" > cosign.key
-          cosign sign-blob --key cosign.key --output-signature ggufy-${{ matrix.target }}.tar.gz.sig ggufy-${{ matrix.target }}.tar.gz
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ggufy-${{ matrix.target }}.tar.gz
-          path: ggufy-${{ matrix.target }}.tar.gz
-      - name: Upload checksum
-        uses: actions/upload-artifact@v4
-        with:
-          name: checksums-${{ matrix.target }}.txt
-          path: checksums.txt
-      - name: Upload signature
-        if: ${{ env.COSIGN_PRIVATE_KEY != '' && env.COSIGN_PASSWORD != '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ggufy-${{ matrix.target }}.tar.gz.sig
-          path: ggufy-${{ matrix.target }}.tar.gz.sig
+          name: ggufy-${{ github.ref_name }}-linux-x86_64
+          path: ggufy-${{ github.ref_name }}-linux-x86_64.tar.gz
 
-  publish:
-    needs: build-release
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target: [aarch64-apple-darwin, x86_64-apple-darwin]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: Package
+        run: |
+          mkdir -p dist
+          BIN_DIR="target/${{ matrix.target }}/release"
+          OUT="ggufy-${{ github.ref_name }}-${{ matrix.target }}.tar.gz"
+          cp "$BIN_DIR/ggufy" dist/ggufy
+          if [ -f "$BIN_DIR/ggufy-simple" ]; then cp "$BIN_DIR/ggufy-simple" dist/ggufy-simple; fi
+          tar -C dist -cvzf "$OUT" ggufy ggufy-simple
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ggufy-${{ github.ref_name }}-${{ matrix.target }}
+          path: ggufy-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --release --locked --target x86_64-pc-windows-msvc
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist
+          BIN_DIR="target/x86_64-pc-windows-msvc/release"
+          cp "$BIN_DIR/ggufy.exe" dist/ggufy.exe
+          if [ -f "$BIN_DIR/ggufy-simple.exe" ]; then cp "$BIN_DIR/ggufy-simple.exe" dist/ggufy-simple.exe; fi
+          zip -j ggufy-${{ github.ref_name }}-windows-x86_64.zip dist/ggufy.exe dist/ggufy-simple.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ggufy-${{ github.ref_name }}-windows-x86_64
+          path: ggufy-${{ github.ref_name }}-windows-x86_64.zip
+
+  release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    needs: [build-linux, build-macos, build-windows]
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
-      - name: Create GitHub Release
+      - name: Collect files
+        run: |
+          mkdir -p dist
+          find artifacts -type f -name '*.tar.gz' -exec mv {} dist/ \;
+          find artifacts -type f -name '*.zip' -exec mv {} dist/ \;
+          ls -lah dist
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.6.0
+      - name: Sign artifacts with cosign
+        if: ${{ secrets.COSIGN_PRIVATE_KEY != '' && secrets.COSIGN_PASSWORD != '' }}
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          cd dist
+          for f in $(ls | grep -E '\.(tar\.gz|zip)$'); do
+            cosign sign-blob --key env://COSIGN_PRIVATE_KEY --output-signature "$f.sig" "$f"
+          done
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS.txt || shasum -a 256 * > SHA256SUMS.txt
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          tag_name: ${{ github.ref_name }}
           files: |
-            artifacts/**/ggufy-*.tar.gz
-            artifacts/**/checksums-*.txt
-            artifacts/**/ggufy-*.tar.gz.sig
+            dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

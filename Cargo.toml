@@ -1,7 +1,23 @@
 [package]
 name = "ggufy"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
+description = "Unified GGUF wrapper for llama.cpp and Ollama"
+license = "MIT"
+repository = "https://github.com/nbiish/ggufy"
+
+[features]
+default = ["simple-bin"]
+simple-bin = []
+
+[[bin]]
+name = "ggufy"
+path = "src/main.rs"
+
+[[bin]]
+name = "ggufy-simple"
+path = "src/bin/ggufy-simple.rs"
+required-features = ["simple-bin"]
 
 [dependencies]
 clap = { version = "4.5.4", features = ["derive", "env"] }
