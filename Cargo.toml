@@ -6,6 +6,12 @@ description = "Unified GGUF wrapper for llama.cpp and Ollama"
 license-file = "LICENSE"
 repository = "https://github.com/nbiish/ggufy"
 readme = "README.md"
+include = [
+    "src/**",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE",
+]
 
 [features]
 default = ["simple-bin"]
