@@ -194,6 +194,21 @@ fn main() {
                 eprintln!("missing prompt");
                 std::process::exit(2);
             }
+            
+            // Check for TTS/audio keywords and force ollama run if detected
+            let prompt_lower = prompt.to_lowercase();
+            let is_tts_or_audio = prompt_lower.contains("tts") || prompt_lower.contains("audio");
+            
+            if is_tts_or_audio {
+                // For TTS/audio, always use ollama run regardless of local availability
+                if model.contains(':') {
+                    let (name, tag) = split_model_tag(&model);
+                    run_ollama_simple(&name, &tag, &prompt, cli.dry_run, cli.verbose);
+                } else {
+                    run_ollama_simple(&model, "cloud", &prompt, cli.dry_run, cli.verbose);
+                }
+                return;
+            }
             if model.contains(':') {
                 let (name, tag) = split_model_tag(&model);
                 if tag.eq_ignore_ascii_case("cloud") {
