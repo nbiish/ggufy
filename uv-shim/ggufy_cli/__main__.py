@@ -30,12 +30,10 @@ def detect_platform() -> tuple[str, str]:
 
 
 def ensure_local_binary() -> Path:
-    exe = shutil.which("ggufy")
-    if exe:
-        return Path(exe)
+    # Always use our cached version to avoid conflicts
     sys_os, target = detect_platform()
     # tag can be overridden by env; default to latest version string matching pyproject
-    tag = os.environ.get("GGUFY_TAG", f"v0.1.1")
+    tag = os.environ.get("GGUFY_TAG", f"v0.1.2")
     base = release_assets_url(tag)
     if sys_os == "windows":
         artifact = f"ggufy-{tag}-windows-x86_64.zip"
@@ -48,7 +46,10 @@ def ensure_local_binary() -> Path:
     cache_dir.mkdir(parents=True, exist_ok=True)
     dl_path = cache_dir / artifact
     if not dl_path.exists():
-        urllib.request.urlretrieve(url, dl_path)
+        try:
+            urllib.request.urlretrieve(url, dl_path)
+        except Exception as e:
+            raise RuntimeError(f"failed to download {url}: {e}")
     out_path = cache_dir / ("ggufy.exe" if sys_os == "windows" else "ggufy")
     if not out_path.exists():
         if dl_path.suffix == ".zip":
@@ -81,7 +82,8 @@ def main() -> None:
     except Exception as e:
         print(f"failed to prepare ggufy binary: {e}")
         sys.exit(127)
-    subprocess.run([str(exe_path), *sys.argv[1:]], check=False)
+    # Use exec to replace the current process, avoiding resource issues
+    os.execv(str(exe_path), [str(exe_path)] + sys.argv[1:])
 
 
 def main_simple() -> None:
@@ -90,5 +92,5 @@ def main_simple() -> None:
     except Exception as e:
         print(f"failed to prepare ggufy binary: {e}")
         sys.exit(127)
-    # prepend the 'simple' subcommand so `ggufy-simple ...` maps to `ggufy simple ...`
-    subprocess.run([str(exe_path), "simple", *sys.argv[1:]], check=False)
+    # Use exec to replace the current process, avoiding resource issues
+    os.execv(str(exe_path), [str(exe_path), "simple"] + sys.argv[1:])

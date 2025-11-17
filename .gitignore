@@ -47,6 +47,9 @@ env/
 .DS_Store
 .DS_Store?
 
+# Rust build artifacts
+target/
+
 # Security and secrets
 *.key
 *.pem
