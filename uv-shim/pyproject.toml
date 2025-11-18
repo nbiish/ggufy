@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ggufy"
 version = "0.1.4"
-description = "Python shim that invokes the ggufy binary"
+description = "Python shim for ggufy - A tool for managing GGUF model files. Visit https://ggufy.com and https://github.com/nbiish/ggufy"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
