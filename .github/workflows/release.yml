@@ -22,7 +22,7 @@ jobs:
           cp target/x86_64-unknown-linux-gnu/release/ggufy dist/ggufy
           if [ -f target/x86_64-unknown-linux-gnu/release/ggufy-simple ]; then cp target/x86_64-unknown-linux-gnu/release/ggufy-simple dist/ggufy-simple; fi
           tar -C dist -cvzf ggufy-${{ github.ref_name }}-linux-x86_64.tar.gz ggufy ggufy-simple
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ggufy-${{ github.ref_name }}-linux-x86_64
           path: ggufy-${{ github.ref_name }}-linux-x86_64.tar.gz
@@ -48,7 +48,7 @@ jobs:
           cp "$BIN_DIR/ggufy" dist/ggufy
           if [ -f "$BIN_DIR/ggufy-simple" ]; then cp "$BIN_DIR/ggufy-simple" dist/ggufy-simple; fi
           tar -C dist -cvzf "$OUT" ggufy ggufy-simple
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ggufy-${{ github.ref_name }}-${{ matrix.target }}
           path: ggufy-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
@@ -71,7 +71,7 @@ jobs:
           cp "$BIN_DIR/ggufy.exe" dist/ggufy.exe
           if [ -f "$BIN_DIR/ggufy-simple.exe" ]; then cp "$BIN_DIR/ggufy-simple.exe" dist/ggufy-simple.exe; fi
           zip -j ggufy-${{ github.ref_name }}-windows-x86_64.zip dist/ggufy.exe dist/ggufy-simple.exe
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ggufy-${{ github.ref_name }}-windows-x86_64
           path: ggufy-${{ github.ref_name }}-windows-x86_64.zip
