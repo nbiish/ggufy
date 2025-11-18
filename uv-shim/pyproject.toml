@@ -1,9 +1,34 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "ggufy"
-version = "0.1.2"
+version = "0.1.3"
 description = "Python shim that invokes the ggufy binary"
 readme = "README.md"
 requires-python = ">=3.8"
+license = {text = "MIT"}
+# SPDX license expression for modern setuptools
+# license = "MIT"
+authors = [
+    {name = "nbiish"}
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/nbiish/ggufy"
+Repository = "https://github.com/nbiish/ggufy"
+Issues = "https://github.com/nbiish/ggufy/issues"
 
 [project.scripts]
 ggufy = "ggufy_cli.__main__:main"
