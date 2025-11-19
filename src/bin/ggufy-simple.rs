@@ -26,7 +26,7 @@ fn main() {
         eprintln!("missing prompt");
         std::process::exit(2);
     }
-    
+
     // Check for TTS/audio keywords and force ollama run if detected
     let prompt_lower = prompt.to_lowercase();
     let is_tts_or_audio = prompt_lower.contains("tts") || prompt_lower.contains("audio");
@@ -38,7 +38,7 @@ fn main() {
             eprintln!("missing model");
             std::process::exit(2)
         });
-        
+
     // Route TTS/audio requests directly to ollama run
     if is_tts_or_audio {
         if model.contains(':') {
@@ -49,7 +49,7 @@ fn main() {
         }
         return;
     }
-        
+
     if model.contains(':') {
         let (name, tag) = split_model_tag(&model);
         if tag.eq_ignore_ascii_case("cloud") {

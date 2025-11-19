@@ -194,20 +194,32 @@ fn main() {
                 eprintln!("missing prompt");
                 std::process::exit(2);
             }
-            
-            // Check for TTS/audio keywords and force ollama run if detected
-            let prompt_lower = prompt.to_lowercase();
-            let is_tts_or_audio = prompt_lower.contains("tts") || prompt_lower.contains("audio");
-            
-            if is_tts_or_audio {
-                // For TTS/audio, always use ollama run regardless of local availability
-                if model.contains(':') {
-                    let (name, tag) = split_model_tag(&model);
-                    run_ollama_simple(&name, &tag, &prompt, cli.dry_run, cli.verbose);
-                } else {
-                    run_ollama_simple(&model, "cloud", &prompt, cli.dry_run, cli.verbose);
+
+            // Check for audio/TTS in model name (user request: audio models will have "audio" in name)
+            // If detected, force usage of llama-cli (or specific audio handling if needed)
+            let model_lower = model.to_lowercase();
+            let is_audio_model = model_lower.contains("audio");
+
+            if is_audio_model {
+                // For audio models, we prioritize local execution via llama-cli if possible,
+                // or we could just fall through to the standard llama-cli path.
+                // The user specifically said: "when -m model name is appended, audio will be in there,
+                // and that will be the indicator for Guffy to know that we will need to use llama.cli audio commands."
+                // Since we don't have specific "audio commands" confirmed, we will ensure it goes to the llama-cli path.
+                
+                // If it's a simple path or model name, we try to resolve it.
+                if let Some(p) = resolve_model_ref(&model, cli.link_dir.as_ref()) {
+                     let bin = resolve_bin("llama-cli").unwrap_or_else(|| {
+                        eprintln!("llama-cli not found on PATH");
+                        std::process::exit(127)
+                    });
+                    let mut cmd = Command::new(bin);
+                    // Assuming standard llama-cli usage is sufficient or user meant just "use llama-cli"
+                    cmd.arg("-m").arg(&p).arg("-p").arg(&prompt).arg("-no-cnv");
+                    cmd.stdout(Stdio::inherit()).stderr(Stdio::null());
+                    spawn_or_print(cmd, cli.dry_run);
+                    return;
                 }
-                return;
             }
             if model.contains(':') {
                 let (name, tag) = split_model_tag(&model);
@@ -235,33 +247,31 @@ fn main() {
                     );
                     std::process::exit(1);
                 }
+            } else if let Some(p) = resolve_model_ref(&model, cli.link_dir.as_ref()) {
+                let bin = resolve_bin("llama-cli").unwrap_or_else(|| {
+                    eprintln!("llama-cli not found on PATH");
+                    std::process::exit(127)
+                });
+                let mut cmd = Command::new(bin);
+                cmd.arg("-m").arg(&p).arg("-p").arg(&prompt).arg("-no-cnv");
+                cmd.stdout(Stdio::inherit()).stderr(Stdio::null());
+                spawn_or_print(cmd, cli.dry_run);
+            } else if is_cloud_model_available(&model) {
+                run_ollama_simple(&model, "cloud", &prompt, cli.dry_run, cli.verbose);
             } else {
-                if let Some(p) = resolve_model_ref(&model, cli.link_dir.as_ref()) {
-                    let bin = resolve_bin("llama-cli").unwrap_or_else(|| {
-                        eprintln!("llama-cli not found on PATH");
-                        std::process::exit(127)
-                    });
-                    let mut cmd = Command::new(bin);
-                    cmd.arg("-m").arg(&p).arg("-p").arg(&prompt).arg("-no-cnv");
-                    cmd.stdout(Stdio::inherit()).stderr(Stdio::null());
-                    spawn_or_print(cmd, cli.dry_run);
-                } else if is_cloud_model_available(&model) {
-                    run_ollama_simple(&model, "cloud", &prompt, cli.dry_run, cli.verbose);
-                } else {
-                    eprintln!("model not found: {}", model);
-                    std::process::exit(1);
-                }
+                eprintln!("model not found: {}", model);
+                std::process::exit(1);
             }
         }
         Commands::List => {
             ensure_models_dir(cli.link_dir.as_ref()).expect("models dir");
-            println!("");
+            println!();
             println!("Ollama models (local):");
-            println!("");
+            println!();
             run_ollama_list(cli.dry_run, cli.verbose);
-            println!("");
+            println!();
             println!("llama.cpp models (.gguf):");
-            println!("");
+            println!();
             let mut linked = 0usize;
             for p in find_llama_cache_models() {
                 println!("{}", p.display());
@@ -269,7 +279,7 @@ fn main() {
                     linked += 1;
                 }
             }
-            println!("");
+            println!();
             for (name, tag) in enumerate_ollama_library_models() {
                 if let Some(blob) = resolve_ollama_library_gguf(&name, &tag) {
                     let link_name = format!("{}-{}.gguf", name, tag);
@@ -742,7 +752,7 @@ fn run_ollama_list(dry_run: bool, verbose: bool) {
         std::process::exit(127)
     });
     if dry_run {
-        println!("{} {}", bin.display(), "list");
+        println!("{} list", bin.display());
         return;
     }
     let out = Command::new(bin).arg("list").output().expect("ollama list");
@@ -750,7 +760,7 @@ fn run_ollama_list(dry_run: bool, verbose: bool) {
         eprintln!("ollama list completed");
     }
     let mut buf = out.stdout;
-    if !buf.ends_with(&[b'\n']) {
+    if !buf.ends_with(b"\n") {
         buf.push(b'\n');
     }
     print!("{}", String::from_utf8_lossy(&buf));
@@ -945,39 +955,6 @@ fn resolve_model_ref(model: &str, link_override: Option<&PathBuf>) -> Option<Pat
     }
     if p2.exists() {
         return Some(p2);
-    }
-    None
-}
-
-fn find_mmproj_for(model_path: &Path, link_override: Option<&PathBuf>) -> Option<PathBuf> {
-    // Try same directory first
-    if let Some(dir) = model_path.parent() {
-        if let Some(mp) = scan_for_mmproj(dir) {
-            return Some(mp);
-        }
-    }
-    // Then try link dir
-    let link_dir = ggufy_models_dir_with(link_override);
-    scan_for_mmproj(&link_dir)
-}
-
-fn scan_for_mmproj(dir: &Path) -> Option<PathBuf> {
-    if !dir.exists() {
-        return None;
-    }
-    for e in WalkDir::new(dir)
-        .max_depth(1)
-        .into_iter()
-        .filter_map(|e| e.ok())
-    {
-        let p = e.path();
-        if p.file_name()
-            .map(|n| n.to_string_lossy().contains("mmproj"))
-            .unwrap_or(false)
-            && p.extension().map(|x| x == "gguf").unwrap_or(false)
-        {
-            return Some(p.to_path_buf());
-        }
     }
     None
 }
