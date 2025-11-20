@@ -26,6 +26,20 @@
    - 🧪 Test workflows locally using `act`
    - 🔎 Verify before pushing to GitHub
 
+5. **Advanced Security Suite**
+   - 🛡️ **OWASP ZAP**: Dynamic Application Security Testing (DAST)
+   - ⚛️ **PQC Audit**: Post-Quantum Cryptography readiness checks
+   - 🔍 **CodeQL**: Static Analysis (SAST) with Copilot Autofix support
+   - 📚 **Security Guide**: `knowledge-base/SECURITY_IMPLEMENTATION.md` for LLM-assisted remediation
+
+## 🤖 Instructions for AI Agents
+
+If you are an LLM (Copilot, Cursor, Cline, etc.) working in this repository:
+
+1.  **Read the Master Guide**: `knowledge-base/SECURITY_IMPLEMENTATION.md` contains the TOON-formatted security architecture.
+2.  **Analyze SARIF**: Check `.github/workflows/` to understand the scanning schedule.
+3.  **Remediation**: When fixing alerts, strictly follow the "Hybrid Mode" PQC standards defined in the guide.
+
 ### 🚀 How to Enable:
 
 #### Step 1: Enable Actions Permissions

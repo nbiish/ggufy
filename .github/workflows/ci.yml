@@ -40,5 +40,5 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install build
       - name: Build package
-        working-directory: uv-shim
+
         run: python -m build

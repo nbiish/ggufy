@@ -1,0 +1,69 @@
+name: PQC Readiness Audit
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '0 0 * * 1' # Weekly scan on Monday
+
+jobs:
+  cbom_scan:
+    name: Generate Cryptographic Bill of Materials
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # Required for uploading SARIF
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate CBOM
+        uses: PQCA/cbomkit-action@v0.1.0
+        with:
+          output-format: json
+          output-file: cbom.json
+          # scan-target: '.' # Default is root
+
+      - name: Upload CBOM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: crypto-inventory
+          path: cbom.json
+
+      - name: Enforce PQC Hybrid Standards
+        continue-on-error: true # Soft fail for now
+        run: |
+          echo "🔍 Analyzing Cryptographic Bill of Materials (CBOM)..."
+          
+          # Check if CBOM exists
+          if [ ! -f cbom.json ]; then
+            echo "::error::CBOM file not found!"
+            exit 1
+          fi
+
+          # 1. Check for Legacy RSA (Classical)
+          if grep -q "RSA" cbom.json; then
+            echo "::warning title=Legacy Crypto Detected::RSA algorithm detected. Ensure this is used in Hybrid Mode with ML-KEM."
+          fi
+
+          # 2. Check for Legacy ECC (Classical)
+          if grep -q "EC" cbom.json || grep -q "Elliptic Curve" cbom.json; then
+            echo "::warning title=Legacy Crypto Detected::Elliptic Curve detected. Ensure this is used in Hybrid Mode with ML-DSA."
+          fi
+
+          # 3. Check for Post-Quantum Algorithms (The Goal)
+          if grep -q "ML-KEM" cbom.json || grep -q "Kyber" cbom.json; then
+            echo "✅ PQC Key Encapsulation (ML-KEM/Kyber) detected."
+          else
+            echo "::notice title=PQC Gap::No Post-Quantum Key Encapsulation (ML-KEM) found."
+          fi
+
+          if grep -q "ML-DSA" cbom.json || grep -q "Dilithium" cbom.json; then
+            echo "✅ PQC Digital Signatures (ML-DSA/Dilithium) detected."
+          else
+            echo "::notice title=PQC Gap::No Post-Quantum Digital Signatures (ML-DSA) found."
+          fi
+

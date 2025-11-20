@@ -20,7 +20,7 @@ jobs:
           test "$VER_TAG" = "$VER_FILE"
       - uses: dtolnay/rust-toolchain@stable
       - name: Publish
-        if: ${{ secrets.CRATES_IO_TOKEN != '' }}
+        if: secrets.CRATES_IO_TOKEN != ''
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
         run: cargo publish --locked

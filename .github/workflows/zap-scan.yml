@@ -1,0 +1,53 @@
+name: OWASP ZAP Full Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Target URL to scan'
+        required: true
+        default: 'http://localhost:3000'
+  schedule:
+    - cron: '0 0 * * 0' # Weekly scan
+
+jobs:
+  zap_scan:
+    runs-on: ubuntu-latest
+    name: Dynamic Application Security Testing (DAST)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------------------------------
+      # OPTIONAL: Start your application here if scanning localhost
+      # ------------------------------------------------------------------------
+      # - name: Start Application
+      #   run: |
+      #     npm ci
+      #     npm run build
+      #     npm run start &
+      #     npx wait-on http://localhost:3000
+      # ------------------------------------------------------------------------
+
+      - name: ZAP Full Scan
+        uses: zaproxy/action-full-scan@v0.12.0
+        with:
+          target: ${{ inputs.target || 'http://localhost:3000' }}
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a' # Ajax Spider for modern apps
+          allow_issue_writing: false # Use GitHub Security tab instead
+          fail_action: false # Don't break build, just report
+
+        env:
+          # Auth configuration (Optional)
+          # ZAP_AUTH_HEADER: "Authorization"
+          # ZAP_AUTH_HEADER_VALUE: "Bearer ${{ secrets.API_TOKEN }}"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Required for SARIF upload
+
+      - name: Upload ZAP Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: report_html.html
+
