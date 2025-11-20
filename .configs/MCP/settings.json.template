@@ -1,0 +1,101 @@
+{
+  "mcpServers": {
+    "brave-search": {
+      "disabled": true,
+      "timeout": 300,
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-brave-search"
+      ],
+      "env": {
+        "BRAVE_API_KEY": "YOUR_BRAVE_API_KEY_HERE"
+      }
+    },
+    "tavily-remote-mcp": {
+      "disabled": true,
+      "timeout": 300,
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.tavily.com/mcp/?tavilyApiKey=YOUR_TAVILY_API_KEY_HERE"
+      ]
+    },
+    "context7": {
+      "disabled": true,
+      "timeout": 300,
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ]
+    },
+    "deepwiki": {
+      "disabled": true,
+      "timeout": 300,
+      "type": "sse",
+      "url": "https://mcp.deepwiki.com/sse"
+    },
+    "time": {
+      "disabled": true,
+      "timeout": 300,
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "mcp-server-time",
+        "--local-timezone=America/New_York"
+      ],
+      "cwd": "/path/to/your/mcp/servers/time"
+    },
+    "fetch": {
+      "disabled": true,
+      "timeout": 300,
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "mcp-server-fetch"
+      ],
+      "cwd": "/path/to/your/mcp/servers/fetch"
+    },
+    "calculator": {
+      "disabled": true,
+      "timeout": 300,
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "mcp-server-calculator"
+      ]
+    },
+    "memory": {
+      "disabled": true,
+      "timeout": 300,
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "env": {
+        "MEMORY_FILE_PATH": "/path/to/your/memory/memories.jsonl"
+      }
+    },
+    "Snyk": {
+      "disabled": true,
+      "timeout": 300,
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "snyk@latest",
+        "mcp",
+        "-t",
+        "stdio"
+      ],
+      "env": {}
+    }
+  }
+}
