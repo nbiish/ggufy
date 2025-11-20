@@ -1,0 +1,76 @@
+name: Reusable Sanitize
+
+on:
+  workflow_call:
+    inputs:
+      target-paths:
+        description: 'Glob pattern for files to sanitize'
+        required: true
+        type: string
+        default: 'CONFIGURATIONS/**/*.json'
+
+jobs:
+  sanitize:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Sanitize files
+        run: |
+          echo "🧹 Sanitizing files in ${{ inputs.target-paths }}..."
+          
+          # Find and process files matching the pattern
+          # Note: Using python glob in the script would be better but for now we use find/glob expansion in shell
+          # We need to handle the glob pattern carefully
+          
+          find . -path "${{ inputs.target-paths }}" -type f -name "*.json" -print0 | xargs -0 python3 .github/scripts/sanitize.py
+          
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if git diff --quiet; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "No secrets found to sanitize"
+          else
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Secrets were found and sanitized!"
+          fi
+
+      - name: Commit sanitized files
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add .
+          git commit -m "🔒 chore: auto-sanitize secrets [skip ci]"
+
+      - name: Push changes
+        if: steps.check_changes.outputs.changes == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+
+      - name: Notify on PR
+        if: steps.check_changes.outputs.changes == 'true' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ **Secrets Detected and Sanitized**\n\nSensitive data was automatically removed from your files.\n\nPlease review the changes and update your local configuration files accordingly.'
+            })
