@@ -16,14 +16,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - uses: dtolnay/rust-toolchain@stable
       - name: Build
-        working-directory: uv-shim
         run: |
           python -m pip install --upgrade pip
-          python -m pip install build
-          python -m build
+          python -m pip install maturin
+          maturin build --release --sdist
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: uv-shim/dist
+          packages-dir: target/wheels
           skip-existing: true

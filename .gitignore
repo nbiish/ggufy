@@ -50,6 +50,9 @@ env/
 # Rust build artifacts
 target/
 
+# GGUF model files (should not be in git)
+*.gguf
+
 # Security and secrets
 *.key
 *.pem

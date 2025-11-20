@@ -1,3 +1,5 @@
+// Copyright © 2025 ᓂᐲᔥ ᐙᐸᓂᒥᑮ-ᑭᓇᐙᐸᑭᓯ (Nbiish Waabanimikii-Kinawaabakizi), also known legally as JUSTIN PAUL KENWABIKISE, professionally documented as Nbiish-Justin Paul Kenwabikise, Anishinaabek Dodem (Anishinaabe Clan): Animikii (Thunder), a descendant of Chief ᑭᓇᐙᐸᑭᓯ (Kinwaabakizi) of the Beaver Island Band, and an enrolled member of the sovereign Grand Traverse Band of Ottawa and Chippewa Indians. This work embodies Traditional Knowledge and Traditional Cultural Expressions. All rights reserved.
+
 use clap::{ArgAction, Parser, Subcommand};
 use dirs::home_dir;
 use regex::Regex;
@@ -30,7 +32,7 @@ struct Cli {
     #[arg(long = "verbose", default_value_t = false)]
     verbose: bool,
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 }
 
 #[derive(Subcommand)]
@@ -84,6 +86,8 @@ enum Commands {
         #[command(subcommand)]
         sub: LlamaCmd,
     },
+    #[command(external_subcommand)]
+    External(Vec<String>),
 }
 
 #[derive(Subcommand)]
@@ -122,7 +126,55 @@ enum LlamaCmd {
 
 fn main() {
     let cli = Cli::parse();
-    match cli.command {
+    
+    // Handle passthrough or default command
+    let command = match cli.command {
+        Some(c) => c,
+        None => Commands::External(vec![]),
+    };
+
+    match command {
+        Commands::External(args) => {
+            if cli.ollama {
+                // Pass through to ollama
+                let bin = resolve_bin("ollama").unwrap_or_else(|| {
+                    eprintln!("ollama not found on PATH");
+                    std::process::exit(127)
+                });
+                let mut cmd = Command::new(bin);
+                cmd.args(&args);
+                cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+                spawn_or_print(cmd, cli.dry_run);
+            } else if cli.llamacpp {
+                // Pass through to llama-* tools
+                // If the first arg matches a known tool suffix (e.g. "server", "quantize"), use llama-<arg>
+                // Otherwise default to llama-cli
+                let (bin_name, args_to_pass) = if !args.is_empty() {
+                    let potential_tool = format!("llama-{}", args[0]);
+                    if resolve_bin(&potential_tool).is_some() {
+                        (potential_tool, &args[1..])
+                    } else {
+                        ("llama-cli".to_string(), &args[..])
+                    }
+                } else {
+                    ("llama-cli".to_string(), &args[..])
+                };
+
+                let bin = resolve_bin(&bin_name).unwrap_or_else(|| {
+                    eprintln!("{} not found on PATH", bin_name);
+                    std::process::exit(127)
+                });
+                
+                let mut cmd = Command::new(bin);
+                cmd.args(args_to_pass);
+                cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+                spawn_or_print(cmd, cli.dry_run);
+            } else {
+                // No flag and no command -> print help
+                use clap::CommandFactory;
+                let _ = Cli::command().print_help();
+            }
+        }
         Commands::Hf { repo, extra } => {
             ensure_models_dir(cli.link_dir.as_ref()).expect("models dir");
             if !cli.llamacpp || cli.ollama {

@@ -1,9 +1,0 @@
-README.md
-pyproject.toml
-ggufy.egg-info/PKG-INFO
-ggufy.egg-info/SOURCES.txt
-ggufy.egg-info/dependency_links.txt
-ggufy.egg-info/entry_points.txt
-ggufy.egg-info/top_level.txt
-ggufy_cli/__init__.py
-ggufy_cli/__main__.py

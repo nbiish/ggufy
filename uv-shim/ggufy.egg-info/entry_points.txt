@@ -1,3 +1,0 @@
-[console_scripts]
-ggufy = ggufy_cli.__main__:main
-ggufy-simple = ggufy_cli.__main__:main_simple

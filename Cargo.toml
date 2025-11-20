@@ -1,10 +1,11 @@
 [package]
 name = "ggufy"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2021"
 description = "Unified GGUF wrapper for llama.cpp and Ollama"
 license-file = "LICENSE"
 repository = "https://github.com/nbiish/ggufy"
+authors = ["ᓂᐲᔥ ᐙᐸᓂᒥᑮ-ᑭᓇᐙᐸᑭᓯ (Nbiish Waabanimikii-Kinawaabakizi)"]
 readme = "README.md"
 include = [
     "src/**",
