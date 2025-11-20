@@ -1,0 +1,1 @@
+- use context7 and websearch to develop an expert level of library/package/architecture understanding of the codebase before making changes or updates

@@ -47,12 +47,6 @@ env/
 .DS_Store
 .DS_Store?
 
-# Rust build artifacts
-target/
-
-# GGUF model files (should not be in git)
-*.gguf
-
 # Security and secrets
 *.key
 *.pem
@@ -83,3 +77,29 @@ secrets/
 *.orig
 *.swp
 *.swo
+
+# Rust
+target/
+
+# Python
+__pycache__/
+*.pyc
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+
+# Shared Libraries
+*.so
+*.dylib
+*.dll
+
+# General
+*.log
+tmp/
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+.pnpm-debug.log
