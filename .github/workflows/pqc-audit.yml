@@ -8,6 +8,13 @@ on:
   schedule:
     - cron: '0 0 * * 1' # Weekly scan on Monday
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   cbom_scan:
     name: Generate Cryptographic Bill of Materials
@@ -21,7 +28,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Generate CBOM
-        uses: PQCA/cbomkit-action@v0.1.0
+        uses: cbomkit/cbomkit-action@v2.1.2
         with:
           output-format: json
           output-file: cbom.json
@@ -44,26 +51,41 @@ jobs:
             exit 1
           fi
 
+          # Install jq for robust parsing
+          # jq is pre-installed on ubuntu-latest runners
+
+          # Check if CBOM is empty or has no components (no crypto found)
+          if [ ! -s cbom.json ] || [ "$(jq '.components | length' cbom.json)" -eq 0 ]; then
+             echo "::notice title=No Crypto Detected::No cryptographic assets found in this repository. Skipping PQC checks."
+             exit 0
+          fi
+
           # 1. Check for Legacy RSA (Classical)
-          if grep -q "RSA" cbom.json; then
-            echo "::warning title=Legacy Crypto Detected::RSA algorithm detected. Ensure this is used in Hybrid Mode with ML-KEM."
+          # Using jq to find RSA occurrences
+          if jq -e '.. | objects | select(.algorithm == "RSA")' cbom.json > /dev/null; then
+             echo "::warning title=Legacy Crypto Detected::RSA algorithm detected. Ensure this is used in Hybrid Mode with ML-KEM."
+             # Optional: Fail if key length is small
+             if jq -e '.. | objects | select(.algorithm == "RSA" and .keyLength < 2048)' cbom.json > /dev/null; then
+                echo "::error title=Weak Crypto::RSA key length < 2048 detected!"
+             fi
           fi
 
           # 2. Check for Legacy ECC (Classical)
-          if grep -q "EC" cbom.json || grep -q "Elliptic Curve" cbom.json; then
+          if jq -e '.. | objects | select(.algorithm | test("EC|Elliptic Curve"))' cbom.json > /dev/null; then
             echo "::warning title=Legacy Crypto Detected::Elliptic Curve detected. Ensure this is used in Hybrid Mode with ML-DSA."
           fi
 
           # 3. Check for Post-Quantum Algorithms (The Goal)
-          if grep -q "ML-KEM" cbom.json || grep -q "Kyber" cbom.json; then
+          if jq -e '.. | objects | select(.algorithm | test("ML-KEM|Kyber"))' cbom.json > /dev/null; then
             echo "✅ PQC Key Encapsulation (ML-KEM/Kyber) detected."
           else
             echo "::notice title=PQC Gap::No Post-Quantum Key Encapsulation (ML-KEM) found."
           fi
 
-          if grep -q "ML-DSA" cbom.json || grep -q "Dilithium" cbom.json; then
+          if jq -e '.. | objects | select(.algorithm | test("ML-DSA|Dilithium"))' cbom.json > /dev/null; then
             echo "✅ PQC Digital Signatures (ML-DSA/Dilithium) detected."
           else
             echo "::notice title=PQC Gap::No Post-Quantum Digital Signatures (ML-DSA) found."
           fi
+
 

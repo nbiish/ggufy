@@ -16,6 +16,13 @@ on:
   schedule:
     - cron: '30 1 * * 0'
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze:
     name: Analyze
@@ -28,23 +35,72 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'javascript', 'python' ]
-        # Add more languages as needed: 'go', 'java', 'ruby', 'c-cpp', 'csharp'
+        include:
+          - language: javascript
+            display: JavaScript/TypeScript
+            patterns: |
+              **/*.js
+              **/*.cjs
+              **/*.mjs
+              **/*.ts
+              **/*.tsx
+          - language: python
+            display: Python
+            patterns: |
+              **/*.py
+          - language: rust
+            display: Rust
+            patterns: |
+              **/*.rs
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Detect ${{ matrix.display }} sources
+      id: detect-sources
+      shell: bash
+      run: |
+        set -euo pipefail
+        patterns="${{ matrix.patterns }}"
+        HAS_CODE=0
+        while IFS= read -r pattern; do
+          [[ -z "$pattern" ]] && continue
+          if git ls-files -- "$pattern" | grep -q .; then
+            HAS_CODE=1
+            break
+          fi
+        done <<< "$patterns"
+
+        if [[ $HAS_CODE -eq 1 ]]; then
+          echo "has-code=true" >> "$GITHUB_OUTPUT"
+          echo "Found source files for ${{ matrix.display }}"
+        else
+          echo "has-code=false" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Skipping ${{ matrix.display }}::No matching source files detected."
+        fi
+
+    - name: No ${{ matrix.display }} sources detected
+      if: steps.detect-sources.outputs.has-code != 'true'
+      run: echo "Skipping CodeQL for ${{ matrix.display }} because no source files matched configured globs."
+
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
+      if: steps.detect-sources.outputs.has-code == 'true'
+      uses: github/codeql-action/init@v4
       with:
         languages: ${{ matrix.language }}
         queries: security-extended,security-and-quality
 
     - name: Autobuild
-      uses: github/codeql-action/autobuild@v3
+      if: steps.detect-sources.outputs.has-code == 'true'
+      # Autobuild attempts to build any compiled languages (C/C++, C#, Go, Java, Swift).
+      # If this step fails, you can remove it and build manually.
+      uses: github/codeql-action/autobuild@v4
+      continue-on-error: true 
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      if: steps.detect-sources.outputs.has-code == 'true'
+      uses: github/codeql-action/analyze@v4
       with:
         category: "/language:${{ matrix.language }}"
+

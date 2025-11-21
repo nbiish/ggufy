@@ -11,20 +11,20 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@v3.6.0
       - name: Prepare pubkey
-        if: secrets.COSIGN_PUBLIC_KEY != ''
+        if: ${{ secrets.COSIGN_PUBLIC_KEY != '' }}
         run: |
           echo "${COSIGN_PUBLIC_KEY}" > cosign.pub
         env:
           COSIGN_PUBLIC_KEY: ${{ secrets.COSIGN_PUBLIC_KEY }}
       - name: Download release assets
-        if: secrets.COSIGN_PUBLIC_KEY != ''
+        if: ${{ secrets.COSIGN_PUBLIC_KEY != '' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir dist
           gh release download "${GITHUB_REF_NAME}" --dir dist
       - name: Verify signatures
-        if: secrets.COSIGN_PUBLIC_KEY != ''
+        if: ${{ secrets.COSIGN_PUBLIC_KEY != '' }}
         run: |
           cd dist
           FAIL=0

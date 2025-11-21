@@ -28,7 +28,7 @@ jobs:
         run: cargo test --all --locked
 
   python-build:
-    name: Python build uv-shim
+    name: Python Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

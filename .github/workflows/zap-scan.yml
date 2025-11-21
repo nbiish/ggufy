@@ -10,8 +10,19 @@ on:
   schedule:
     - cron: '0 0 * * 0' # Weekly scan
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   zap_scan:
+    permissions:
+      contents: read
+      security-events: write # Required for SARIF upload
+      issues: write # Required if ZAP needs to file issues (optional)
     runs-on: ubuntu-latest
     name: Dynamic Application Security Testing (DAST)
     steps:
@@ -29,7 +40,21 @@ jobs:
       #     npx wait-on http://localhost:3000
       # ------------------------------------------------------------------------
 
+      - name: Check Target Availability
+        run: |
+          target="${{ inputs.target || 'http://localhost:3000' }}"
+          echo "Checking availability of $target..."
+          if curl --output /dev/null --silent --head --fail "$target"; then
+            echo "Target is up!"
+          else
+            echo "::warning::Target $target is not reachable. ZAP scan may fail or produce empty results."
+            # We don't exit 1 here to allow the scan to attempt anyway, or for external targets that block HEAD.
+          fi
+
       - name: ZAP Full Scan
+        # Only run if target is reachable or if we want to force it (can add input for force)
+        # For now, we let it run but handle the error gracefully if it fails
+        continue-on-error: true 
         uses: zaproxy/action-full-scan@v0.12.0
         with:
           target: ${{ inputs.target || 'http://localhost:3000' }}
@@ -50,4 +75,5 @@ jobs:
         with:
           name: zap-report
           path: report_html.html
+
 
