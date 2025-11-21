@@ -1,5 +1,7 @@
 **ggufy: Unified GGUF Model Wrapper**
 
+![CI](https://github.com/nbiish/ggufy/actions/workflows/ci.yml/badge.svg)
+
 <div align="center">
   <hr width="50%">
   <h3>Support This Project</h3>
