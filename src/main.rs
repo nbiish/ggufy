@@ -126,7 +126,7 @@ enum LlamaCmd {
 
 fn main() {
     let cli = Cli::parse();
-    
+
     // Handle passthrough or default command
     let command = match cli.command {
         Some(c) => c,
@@ -164,7 +164,7 @@ fn main() {
                     eprintln!("{} not found on PATH", bin_name);
                     std::process::exit(127)
                 });
-                
+
                 let mut cmd = Command::new(bin);
                 cmd.args(args_to_pass);
                 cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
@@ -258,10 +258,10 @@ fn main() {
                 // The user specifically said: "when -m model name is appended, audio will be in there,
                 // and that will be the indicator for Guffy to know that we will need to use llama.cli audio commands."
                 // Since we don't have specific "audio commands" confirmed, we will ensure it goes to the llama-cli path.
-                
+
                 // If it's a simple path or model name, we try to resolve it.
                 if let Some(p) = resolve_model_ref(&model, cli.link_dir.as_ref()) {
-                     let bin = resolve_bin("llama-cli").unwrap_or_else(|| {
+                    let bin = resolve_bin("llama-cli").unwrap_or_else(|| {
                         eprintln!("llama-cli not found on PATH");
                         std::process::exit(127)
                     });
