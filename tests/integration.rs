@@ -13,6 +13,10 @@ fn help_runs() {
 
 #[test]
 fn dry_run_llama_hf() {
+    if std::process::Command::new("llama-server").arg("--version").output().is_err() {
+        println!("Skipping dry_run_llama_hf because llama-server is not found");
+        return;
+    }
     let mut cmd = Command::cargo_bin("ggufy").unwrap();
     cmd.args([
         "--dry-run",
