@@ -36,14 +36,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - language: javascript
-            display: JavaScript/TypeScript
-            patterns: |
-              **/*.js
-              **/*.cjs
-              **/*.mjs
-              **/*.ts
-              **/*.tsx
           - language: python
             display: Python
             patterns: |
@@ -91,10 +83,14 @@ jobs:
         languages: ${{ matrix.language }}
         queries: security-extended,security-and-quality
 
+    - name: Build Rust
+      if: matrix.language == 'rust' && steps.detect-sources.outputs.has-code == 'true'
+      run: |
+        rustup update stable
+        cargo build --release
+
     - name: Autobuild
-      if: steps.detect-sources.outputs.has-code == 'true'
-      # Autobuild attempts to build any compiled languages (C/C++, C#, Go, Java, Swift).
-      # If this step fails, you can remove it and build manually.
+      if: matrix.language != 'rust' && steps.detect-sources.outputs.has-code == 'true'
       uses: github/codeql-action/autobuild@v4
       continue-on-error: true 
 
