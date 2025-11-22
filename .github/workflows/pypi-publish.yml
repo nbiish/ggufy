@@ -21,4 +21,4 @@ jobs:
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         with:
           command: publish
-          args: --non-interactive --skip-existing --yes
+          args: --non-interactive --skip-existing
