@@ -55,7 +55,7 @@ jobs:
         # Only run if target is reachable or if we want to force it (can add input for force)
         # For now, we let it run but handle the error gracefully if it fails
         continue-on-error: true 
-        uses: zaproxy/action-full-scan@v0.12.0
+        uses: zaproxy/action-full-scan@v0.13.0
         with:
           target: ${{ inputs.target || 'http://localhost:3000' }}
           rules_file_name: '.zap/rules.tsv'
