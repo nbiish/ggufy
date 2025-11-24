@@ -27,7 +27,7 @@ jobs:
     name: Dynamic Application Security Testing (DAST)
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # ------------------------------------------------------------------------
       # OPTIONAL: Start your application here if scanning localhost
